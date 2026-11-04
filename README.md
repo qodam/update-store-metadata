@@ -1,4 +1,4 @@
-# update-store-metadata
+# store-metadata-updater
 
 Update your **Google Play** and **App Store** listings (text, screenshots, subscription prices) directly through the store APIs, **without shipping a new build**.
 
@@ -33,7 +33,7 @@ Press **Enter** to keep the value shown in brackets, type **`-`** to skip a step
 
 ```bash
 git clone <repo-url>
-cd update-store-metadata
+cd store-metadata-updater
 npm install
 cp config/config.example.js config/config.js
 ```
