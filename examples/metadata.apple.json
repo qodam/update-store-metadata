@@ -1,0 +1,16 @@
+{
+  "copyright": "2026 Mon Entreprise",
+  "locales": {
+    "fr-FR": {
+      "name": "Mon App",
+      "subtitle": "Sous-titre (30 caractères max)",
+      "privacyPolicyUrl": "https://example.com/confidentialite",
+      "description": "La description complète (4000 caractères max).",
+      "keywords": "mot1,mot2,mot3",
+      "promotionalText": "Texte promotionnel (170 caractères max).",
+      "whatsNew": "Corrections et améliorations.",
+      "supportUrl": "https://example.com/support",
+      "marketingUrl": "https://example.com"
+    }
+  }
+}

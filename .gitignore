@@ -1,0 +1,28 @@
+# Dépendances
+node_modules/
+
+# Secrets : ne JAMAIS commiter
+config/config.js
+config/*.json
+*.p8
+*.pem
+service-account*.json
+
+# Données de travail (générées ou propres à chaque app)
+metadata*.json
+whatsnew.json
+screenshots/
+screenshots-from-store/
+mockups/
+*.xlsx
+*.xls
+
+# Gardés : les exemples
+!examples/**
+
+# Système / éditeurs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

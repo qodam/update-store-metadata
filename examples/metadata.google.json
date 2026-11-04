@@ -1,0 +1,18 @@
+{
+  "details": {
+    "contactEmail": "support@example.com",
+    "contactWebsite": "https://example.com"
+  },
+  "locales": {
+    "fr-FR": {
+      "title": "Mon App",
+      "shortDescription": "Une phrase courte (80 caractères max).",
+      "fullDescription": "La description complète (4000 caractères max)."
+    },
+    "en-US": {
+      "title": "My App",
+      "shortDescription": "A short sentence (80 characters max).",
+      "fullDescription": "The full description (4000 characters max)."
+    }
+  }
+}

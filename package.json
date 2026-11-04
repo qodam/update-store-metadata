@@ -1,0 +1,28 @@
+{
+  "name": "store-metadata-updater",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mise à jour des métadonnées Google Play / App Store Connect sans build",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "update:android": "node google/index.js",
+    "update:ios": "node apple/index.js",
+    "fetch:android": "node google/fetch.js",
+    "fetch:ios": "node apple/fetch.js",
+    "mockups:android": "node google/lib/mockups.js",
+    "mockups:ios": "node apple/lib/mockups.js",
+    "price:android": "node google/lib/price.mjs",
+    "price:ios": "node apple/lib/price.mjs",
+    "whatsnew:ios": "node apple/lib/whatnews.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "googleapis": "^140.0.0",
+    "image-size": "^2.0.4",
+    "jsonwebtoken": "^9.0.3",
+    "xlsx": "^0.18.5"
+  }
+}
