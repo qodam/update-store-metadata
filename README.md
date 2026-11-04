@@ -1,4 +1,4 @@
-# store-metadata-updater
+# update-store-metadata
 
 Update your **Google Play** and **App Store** listings (text, screenshots, subscription prices) directly through the store APIs, **without shipping a new build**.
 
@@ -26,14 +26,14 @@ Press **Enter** to keep the value shown in brackets, type **`-`** to skip a step
 ## Requirements
 
 - **Node.js 18 or later** (uses native `fetch` and top-level `await`)
-- **Google Play**: a Google Cloud service account with the *Google Play Android Developer API* enabled, invited to the Play Console with access to the app
-- **App Store**: an App Store Connect API key (*App Manager* or *Admin* role) as a `.p8` file
+- **Google Play**: a Google Cloud service account with the _Google Play Android Developer API_ enabled, invited to the Play Console with access to the app
+- **App Store**: an App Store Connect API key (_App Manager_ or _Admin_ role) as a `.p8` file
 
 ## Installation
 
 ```bash
 git clone <repo-url>
-cd store-metadata-updater
+cd update-store-metadata
 npm install
 cp config/config.example.js config/config.js
 ```
@@ -44,34 +44,34 @@ Then fill in `config/config.js` (see below).
 
 All settings live in `config/config.js`, which is ignored by git:
 
-| Key | Store | Description |
-|---|---|---|
-| `KEY_FILE` | Google | Path to the service account JSON key |
-| `SEND_FOR_REVIEW` | Google | `false`: saved without review · `true`: sent for review |
-| `ISSUER_ID` | Apple | API key Issuer ID |
-| `KEY_ID` | Apple | API key Key ID |
-| `PRIVATE_KEY_PATH` | Apple | Path to the `AuthKey_XXXX.p8` file |
+| Key                | Store  | Description                                             |
+| ------------------ | ------ | ------------------------------------------------------- |
+| `KEY_FILE`         | Google | Path to the service account JSON key                    |
+| `SEND_FOR_REVIEW`  | Google | `false`: saved without review · `true`: sent for review |
+| `ISSUER_ID`        | Apple  | API key Issuer ID                                       |
+| `KEY_ID`           | Apple  | API key Key ID                                          |
+| `PRIVATE_KEY_PATH` | Apple  | Path to the `AuthKey_XXXX.p8` file                      |
 
 > ⚠️ **Use absolute paths** for `KEY_FILE` and `PRIVATE_KEY_PATH`. Depending on the script, relative paths are not resolved from the same folder (see [Known limitations](#known-limitations)).
 
 ### Where to get the keys
 
-- **Google**: Google Cloud Console → *IAM & Admin* → *Service Accounts* → *Keys* → *Add key (JSON)*. Then invite the service account email in the Play Console (*Users and permissions*).
-- **Apple**: App Store Connect → *Users and Access* → *Integrations* → *App Store Connect API*. The `.p8` file can be downloaded **only once**.
+- **Google**: Google Cloud Console → _IAM & Admin_ → _Service Accounts_ → _Keys_ → _Add key (JSON)_. Then invite the service account email in the Play Console (_Users and permissions_).
+- **Apple**: App Store Connect → _Users and Access_ → _Integrations_ → _App Store Connect API_. The `.p8` file can be downloaded **only once**.
 
 ## Commands
 
-| Command | What it does |
-|---|---|
-| `npm run fetch:android` | Downloads the current Google Play listing → JSON + images (read-only) |
-| `npm run fetch:ios` | Downloads the current App Store listing → JSON + screenshots (read-only) |
+| Command                   | What it does                                                              |
+| ------------------------- | ------------------------------------------------------------------------- |
+| `npm run fetch:android`   | Downloads the current Google Play listing → JSON + images (read-only)     |
+| `npm run fetch:ios`       | Downloads the current App Store listing → JSON + screenshots (read-only)  |
 | `npm run mockups:android` | Copies your mockups into `screenshots/<locale>/<device>` for every locale |
-| `npm run mockups:ios` | Same for iPhone / iPad |
-| `npm run update:android` | Uploads text and/or images to Google Play |
-| `npm run update:ios` | Uploads text and/or screenshots to the App Store |
-| `npm run whatsnew:ios` | Updates only the "What's New" text of an iOS version |
-| `npm run price:android` | Google Play subscription prices from an Excel file (dry run) |
-| `npm run price:ios` | App Store subscription prices from an Excel file (dry run) |
+| `npm run mockups:ios`     | Same for iPhone / iPad                                                    |
+| `npm run update:android`  | Uploads text and/or images to Google Play                                 |
+| `npm run update:ios`      | Uploads text and/or screenshots to the App Store                          |
+| `npm run whatsnew:ios`    | Updates only the "What's New" text of an iOS version                      |
+| `npm run price:android`   | Google Play subscription prices from an Excel file (dry run)              |
+| `npm run price:ios`       | App Store subscription prices from an Excel file (dry run)                |
 
 To actually apply price changes, add `--apply`:
 
@@ -91,13 +91,13 @@ node apple/lib/whatnews.js <appId> <version> [file.json] [--yes]
 2. **Edit** the JSON (text) and/or prepare the images (`mockups:*`).
 3. **Upload**: `npm run update:android` / `update:ios`.
 4. **Publish**:
-   - Google: *Play Console → Publishing overview* (unless `SEND_FOR_REVIEW: true`)
+   - Google: _Play Console → Publishing overview_ (unless `SEND_FOR_REVIEW: true`)
    - Apple: submit the version in App Store Connect
 
 ### Built-in safeguards
 
 - **Everything is validated before upload**: Google text lengths, image count and dimensions.
-- **Google**: all changes go into a single *edit*. If anything fails, the edit is deleted and nothing is half-published.
+- **Google**: all changes go into a single _edit_. If anything fails, the edit is deleted and nothing is half-published.
 - **Apple**: only a version in an editable state (`PREPARE_FOR_SUBMISSION`, `REJECTED`…) is modified. If the requested version doesn't exist, it is created, unless another version is already being prepared.
 - **A field missing from the JSON keeps its current value.**
 
@@ -109,9 +109,16 @@ Full examples in [`examples/`](examples/).
 
 ```json
 {
-  "details": { "contactEmail": "support@example.com", "contactWebsite": "https://example.com" },
+  "details": {
+    "contactEmail": "support@example.com",
+    "contactWebsite": "https://example.com"
+  },
   "locales": {
-    "en-US": { "title": "≤ 30", "shortDescription": "≤ 80", "fullDescription": "≤ 4000" }
+    "en-US": {
+      "title": "≤ 30",
+      "shortDescription": "≤ 80",
+      "fullDescription": "≤ 4000"
+    }
   }
 }
 ```
@@ -123,15 +130,21 @@ Full examples in [`examples/`](examples/).
   "copyright": "2026 My Company",
   "locales": {
     "en-US": {
-      "name": "", "subtitle": "", "privacyPolicyUrl": "",
-      "description": "", "keywords": "", "promotionalText": "",
-      "whatsNew": "", "supportUrl": "", "marketingUrl": ""
+      "name": "",
+      "subtitle": "",
+      "privacyPolicyUrl": "",
+      "description": "",
+      "keywords": "",
+      "promotionalText": "",
+      "whatsNew": "",
+      "supportUrl": "",
+      "marketingUrl": ""
     }
   }
 }
 ```
 
-`name`, `subtitle`, `privacyPolicyUrl` and `privacyChoicesUrl` go to the *App Info*. All other fields go to the version.
+`name`, `subtitle`, `privacyPolicyUrl` and `privacyChoicesUrl` go to the _App Info_. All other fields go to the version.
 
 **iOS What's New** (`whatsnew.json`), three accepted shapes:
 
@@ -186,9 +199,9 @@ The language mapping is defined in `LANGUES` at the top of each `mockups.js`.
 
 Both scripts read the **`Prix par pays`** sheet of an Excel file:
 
-| Pays | Code | Devise | Prix |
-|---|---|---|---|
-| France | FR | EUR | 4.99 |
+| Pays   | Code | Devise | Prix |
+| ------ | ---- | ------ | ---- |
+| France | FR   | EUR    | 4.99 |
 
 Columns: `Pays` = country, `Code` = region code, `Devise` = currency, `Prix` = price.
 
