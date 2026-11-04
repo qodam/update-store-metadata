@@ -1,5 +1,5 @@
 {
-  "name": "store-metadata-updater",
+  "name": "update-store-metadata",
   "version": "1.0.0",
   "private": true,
   "description": "Mise à jour des métadonnées Google Play / App Store Connect sans build",

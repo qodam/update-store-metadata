@@ -1,255 +1,244 @@
-# store-metadata-updater
+# update-store-metadata
 
-Met à jour les fiches **Google Play** et **App Store** (textes, captures, prix des abonnements) directement par les API, **sans refaire de build**.
+Update your **Google Play** and **App Store** listings (text, screenshots, subscription prices) directly through the store APIs, **without shipping a new build**.
 
-Tous les scripts sont interactifs : ils posent leurs questions dans le terminal.
-**Entrée** garde la valeur proposée entre crochets, **`-`** saute l'étape.
+All scripts are interactive and ask their questions in the terminal (prompts are in French).
+Press **Enter** to keep the value shown in brackets, type **`-`** to skip a step.
 
 ---
 
-## Sommaire
+## Table of contents
 
-- [Prérequis](#prérequis)
+- [Requirements](#requirements)
 - [Installation](#installation)
 - [Configuration](#configuration)
-- [Commandes](#commandes)
-- [Flux de travail conseillé](#flux-de-travail-conseillé)
-- [Formats des fichiers](#formats-des-fichiers)
-- [Organisation des images](#organisation-des-images)
-- [Prix des abonnements](#prix-des-abonnements)
-- [Sécurité](#sécurité)
-- [Limites connues](#limites-connues)
-- [Structure du projet](#structure-du-projet)
+- [Commands](#commands)
+- [Recommended workflow](#recommended-workflow)
+- [File formats](#file-formats)
+- [Image layout](#image-layout)
+- [Subscription prices](#subscription-prices)
+- [Security](#security)
+- [Known limitations](#known-limitations)
+- [Project structure](#project-structure)
 
 ---
 
-## Prérequis
+## Requirements
 
-- **Node.js 18 ou plus** (utilise `fetch` natif et `await` au niveau racine)
-- **Google Play** : un compte de service Google Cloud avec l'API _Google Play Android Developer_ activée, invité dans la Play Console avec les droits sur l'app
-- **App Store** : une clé API App Store Connect (rôle _App Manager_ ou _Admin_) au format `.p8`
+- **Node.js 18 or later** (uses native `fetch` and top-level `await`)
+- **Google Play**: a Google Cloud service account with the *Google Play Android Developer API* enabled, invited to the Play Console with access to the app
+- **App Store**: an App Store Connect API key (*App Manager* or *Admin* role) as a `.p8` file
 
 ## Installation
 
 ```bash
-git clone <url-du-depot>
-cd store-metadata-updater
+git clone <repo-url>
+cd update-store-metadata
 npm install
 cp config/config.example.js config/config.js
 ```
 
-Puis remplis `config/config.js` (voir ci-dessous).
+Then fill in `config/config.js` (see below).
 
 ## Configuration
 
-Toute la config est dans `config/config.js` (ignoré par git) :
+All settings live in `config/config.js`, which is ignored by git:
 
-| Clé                | Store  | Description                                                  |
-| ------------------ | ------ | ------------------------------------------------------------ |
-| `KEY_FILE`         | Google | Chemin du JSON du compte de service                          |
-| `SEND_FOR_REVIEW`  | Google | `false` : enregistré sans examen · `true` : envoyé en examen |
-| `ISSUER_ID`        | Apple  | Issuer ID de la clé API                                      |
-| `KEY_ID`           | Apple  | Key ID de la clé API                                         |
-| `PRIVATE_KEY_PATH` | Apple  | Chemin du fichier `AuthKey_XXXX.p8`                          |
+| Key | Store | Description |
+|---|---|---|
+| `KEY_FILE` | Google | Path to the service account JSON key |
+| `SEND_FOR_REVIEW` | Google | `false`: saved without review · `true`: sent for review |
+| `ISSUER_ID` | Apple | API key Issuer ID |
+| `KEY_ID` | Apple | API key Key ID |
+| `PRIVATE_KEY_PATH` | Apple | Path to the `AuthKey_XXXX.p8` file |
 
-> ⚠️ **Utilise des chemins absolus** pour `KEY_FILE` et `PRIVATE_KEY_PATH`. Selon le script, un chemin relatif n'est pas résolu depuis le même dossier (voir [Limites connues](#limites-connues)).
+> ⚠️ **Use absolute paths** for `KEY_FILE` and `PRIVATE_KEY_PATH`. Depending on the script, relative paths are not resolved from the same folder (see [Known limitations](#known-limitations)).
 
-### Où trouver les clés
+### Where to get the keys
 
-- **Google** : Google Cloud Console → _IAM et administration_ → _Comptes de service_ → _Clés_ → _Ajouter une clé (JSON)_. Invite ensuite l'e-mail du compte de service dans la Play Console (_Utilisateurs et autorisations_).
-- **Apple** : App Store Connect → _Utilisateurs et accès_ → _Intégrations_ → _Clés API de l'App Store Connect_. Le `.p8` ne se télécharge **qu'une seule fois**.
+- **Google**: Google Cloud Console → *IAM & Admin* → *Service Accounts* → *Keys* → *Add key (JSON)*. Then invite the service account email in the Play Console (*Users and permissions*).
+- **Apple**: App Store Connect → *Users and Access* → *Integrations* → *App Store Connect API*. The `.p8` file can be downloaded **only once**.
 
-## Commandes
+## Commands
 
-| Commande                  | Ce qu'elle fait                                                                  |
-| ------------------------- | -------------------------------------------------------------------------------- |
-| `npm run fetch:android`   | Récupère la fiche Google Play actuelle → JSON + images (ne modifie rien)         |
-| `npm run fetch:ios`       | Récupère la fiche App Store actuelle → JSON + captures (ne modifie rien)         |
-| `npm run mockups:android` | Copie tes mockups dans `screenshots/<langue>/<appareil>` pour toutes les langues |
-| `npm run mockups:ios`     | Pareil pour iPhone / iPad                                                        |
-| `npm run update:android`  | Envoie textes et/ou images sur Google Play                                       |
-| `npm run update:ios`      | Envoie textes et/ou captures sur l'App Store                                     |
-| `npm run whatsnew:ios`    | Met à jour uniquement « Nouveautés » d'une version iOS                           |
-| `npm run price:android`   | Prix d'un abonnement Google Play depuis un Excel (essai à blanc)                 |
-| `npm run price:ios`       | Prix d'un abonnement App Store depuis un Excel (essai à blanc)                   |
+| Command | What it does |
+|---|---|
+| `npm run fetch:android` | Downloads the current Google Play listing → JSON + images (read-only) |
+| `npm run fetch:ios` | Downloads the current App Store listing → JSON + screenshots (read-only) |
+| `npm run mockups:android` | Copies your mockups into `screenshots/<locale>/<device>` for every locale |
+| `npm run mockups:ios` | Same for iPhone / iPad |
+| `npm run update:android` | Uploads text and/or images to Google Play |
+| `npm run update:ios` | Uploads text and/or screenshots to the App Store |
+| `npm run whatsnew:ios` | Updates only the "What's New" text of an iOS version |
+| `npm run price:android` | Google Play subscription prices from an Excel file (dry run) |
+| `npm run price:ios` | App Store subscription prices from an Excel file (dry run) |
 
-Pour appliquer réellement les prix, ajoute `--apply` :
+To actually apply price changes, add `--apply`:
 
 ```bash
 npm run price:ios -- --apply
 ```
 
-`whatsnew:ios` accepte aussi des arguments directs :
+`whatsnew:ios` also accepts direct arguments:
 
 ```bash
-node apple/lib/whatnews.js <appId> <version> [fichier.json] [--yes]
+node apple/lib/whatnews.js <appId> <version> [file.json] [--yes]
 ```
 
-## Flux de travail conseillé
+## Recommended workflow
 
-1. **Récupérer l'existant** : `npm run fetch:android` / `fetch:ios`. Tu obtiens un JSON au bon format, prêt à modifier.
-2. **Modifier** le JSON (textes) et/ou préparer les images (`mockups:*`).
-3. **Envoyer** : `npm run update:android` / `update:ios`.
-4. **Publier** :
-   - Google : _Play Console → Vue d'ensemble de la publication_ (sauf si `SEND_FOR_REVIEW: true`)
-   - Apple : soumettre la version dans App Store Connect
+1. **Fetch the current listing**: `npm run fetch:android` / `fetch:ios`. You get a JSON file in the right format, ready to edit.
+2. **Edit** the JSON (text) and/or prepare the images (`mockups:*`).
+3. **Upload**: `npm run update:android` / `update:ios`.
+4. **Publish**:
+   - Google: *Play Console → Publishing overview* (unless `SEND_FOR_REVIEW: true`)
+   - Apple: submit the version in App Store Connect
 
-### Ce qui protège tes fiches
+### Built-in safeguards
 
-- **Tout est vérifié avant l'envoi** : longueurs des textes Google, nombre et dimensions des images.
-- **Google** : tout passe dans une seule _édition_. En cas d'erreur, elle est supprimée et rien n'est publié à moitié.
-- **Apple** : seule une version en préparation (`PREPARE_FOR_SUBMISSION`, `REJECTED`…) est modifiée. Si la version demandée n'existe pas, elle est créée, sauf si une autre est déjà en préparation.
-- **Un champ absent du JSON garde sa valeur actuelle.**
+- **Everything is validated before upload**: Google text lengths, image count and dimensions.
+- **Google**: all changes go into a single *edit*. If anything fails, the edit is deleted and nothing is half-published.
+- **Apple**: only a version in an editable state (`PREPARE_FOR_SUBMISSION`, `REJECTED`…) is modified. If the requested version doesn't exist, it is created, unless another version is already being prepared.
+- **A field missing from the JSON keeps its current value.**
 
-## Formats des fichiers
+## File formats
 
-Exemples complets dans [`examples/`](examples/).
+Full examples in [`examples/`](examples/).
 
-**Google Play** (`metadata.json`) :
+**Google Play** (`metadata.json`):
 
 ```json
 {
-  "details": {
-    "contactEmail": "support@example.com",
-    "contactWebsite": "https://example.com"
-  },
+  "details": { "contactEmail": "support@example.com", "contactWebsite": "https://example.com" },
   "locales": {
-    "fr-FR": {
-      "title": "≤ 30",
-      "shortDescription": "≤ 80",
-      "fullDescription": "≤ 4000"
+    "en-US": { "title": "≤ 30", "shortDescription": "≤ 80", "fullDescription": "≤ 4000" }
+  }
+}
+```
+
+**App Store** (`metadata.json`):
+
+```json
+{
+  "copyright": "2026 My Company",
+  "locales": {
+    "en-US": {
+      "name": "", "subtitle": "", "privacyPolicyUrl": "",
+      "description": "", "keywords": "", "promotionalText": "",
+      "whatsNew": "", "supportUrl": "", "marketingUrl": ""
     }
   }
 }
 ```
 
-**App Store** (`metadata.json`) :
+`name`, `subtitle`, `privacyPolicyUrl` and `privacyChoicesUrl` go to the *App Info*. All other fields go to the version.
+
+**iOS What's New** (`whatsnew.json`), three accepted shapes:
 
 ```json
-{
-  "copyright": "2026 Mon Entreprise",
-  "locales": {
-    "fr-FR": {
-      "name": "",
-      "subtitle": "",
-      "privacyPolicyUrl": "",
-      "description": "",
-      "keywords": "",
-      "promotionalText": "",
-      "whatsNew": "",
-      "supportUrl": "",
-      "marketingUrl": ""
-    }
-  }
-}
+{ "en-US": "text", "fr-FR": "texte" }
+{ "*": "same text for every existing locale" }
+{ "locales": { "en-US": { "whatsNew": "text" } } }
 ```
 
-`name`, `subtitle`, `privacyPolicyUrl` et `privacyChoicesUrl` vont dans l'_App Info_. Tous les autres champs vont dans la version.
+## Image layout
 
-**Nouveautés iOS** (`whatsnew.json`), trois formes acceptées :
+Files are uploaded **in filename order** (`1.png`, `2.png`, … `10.png`). Existing images of the same type are **replaced**.
 
-```json
-{ "fr-FR": "texte", "en-US": "text" }
-{ "*": "même texte pour toutes les langues existantes" }
-{ "locales": { "fr-FR": { "whatsNew": "texte" } } }
-```
-
-## Organisation des images
-
-Les fichiers sont envoyés **dans l'ordre de leur nom** (`1.png`, `2.png`, … `10.png`). Les images existantes du même type sont **remplacées**.
-
-**Google Play** :
+**Google Play**:
 
 ```
 screenshots/
-└── fr-FR/
-    ├── phone/      (max 8, côtés entre 320 et 3840 px)
+└── en-US/
+    ├── phone/      (max 8, each side between 320 and 3840 px)
     ├── tablet7/    (max 8)
     ├── tablet10/   (max 8)
     ├── feature/    (1 image, 1024×500)
     └── icon/       (1 image, 512×512)
 ```
 
-**App Store** :
+**App Store**:
 
 ```
 screenshots/
-└── fr-FR/
-    ├── iphone/     (max 10, 6,5" : 1284×2778 ou 1242×2688)
-    └── ipad/       (max 10, 13" : 2064×2752 ou 2048×2732)
+└── en-US/
+    ├── iphone/     (max 10, 6.5": 1284×2778 or 1242×2688)
+    └── ipad/       (max 10, 13": 2064×2752 or 2048×2732)
 ```
 
-Le portrait et le paysage sont acceptés.
+Portrait and landscape are both accepted.
 
 ### Mockups
 
-Les scripts `mockups:*` partent d'un dossier par langue courte et le copient vers chaque langue du store (`fr` → `fr-FR`, `fr-CA`…) :
+The `mockups:*` scripts take one folder per short language code and copy it to every matching store locale (`en` → `en-US`, `en-GB`…):
 
 ```
 mockups/
-├── phone/fr/  phone/en/ …      (Google)
-├── icon/                        (Google, commun à toutes les langues)
-├── iphone/fr/ iphone/en/ …     (Apple)
-└── ipad/fr/   ipad/en/ …
+├── phone/en/  phone/fr/ …      (Google)
+├── icon/                        (Google, shared by all locales)
+├── iphone/en/ iphone/fr/ …     (Apple)
+└── ipad/en/   ipad/fr/ …
 ```
 
-La correspondance des langues est définie dans `LANGUES`, en haut de chaque `mockups.js`.
+The language mapping is defined in `LANGUES` at the top of each `mockups.js`.
 
-## Prix des abonnements
+## Subscription prices
 
-Les deux scripts lisent l'onglet **`Prix par pays`** d'un fichier Excel :
+Both scripts read the **`Prix par pays`** sheet of an Excel file:
 
-| Pays   | Code | Devise | Prix |
-| ------ | ---- | ------ | ---- |
-| France | FR   | EUR    | 4.99 |
+| Pays | Code | Devise | Prix |
+|---|---|---|---|
+| France | FR | EUR | 4.99 |
 
-- `Code` : code région (`FR` chez Google, `FRA` chez Apple)
-- `Devise` : facultatif. Côté Google, la ligne est ignorée si la devise ne correspond pas.
-- **Google** : met à jour les `regionalConfigs` du forfait de base demandé.
-- **Apple** : choisit le palier de prix le plus proche. Le changement est programmé pour **demain**, et la ligne est ignorée si l'écart dépasse 25 %.
+Columns: `Pays` = country, `Code` = region code, `Devise` = currency, `Prix` = price.
 
-Sans `--apply`, les scripts affichent seulement ce qui changerait.
+- `Code`: region code (`FR` on Google, `FRA` on Apple)
+- `Devise`: optional. On Google, the row is skipped if the currency doesn't match.
+- **Google**: updates the `regionalConfigs` of the requested base plan.
+- **Apple**: picks the closest Apple price point. The change is scheduled for **tomorrow**, and the row is skipped if the gap is over 25%.
 
-## Sécurité
+Without `--apply`, the scripts only show what would change.
 
-- `config/config.js`, les `.p8` et les JSON de compte de service sont dans `.gitignore`. **Vérifie avec `git status` avant chaque commit.**
-- Si une clé a déjà été commitée, même une seule fois : **révoque-la** et génères-en une nouvelle. La supprimer de l'historique ne suffit pas.
-- Donne au compte de service et à la clé Apple **les droits minimum** nécessaires.
+## Security
 
-## Limites connues
+- `config/config.js`, `.p8` files and service account JSON files are in `.gitignore`. **Check `git status` before every commit.**
+- If a key has ever been committed, even once: **revoke it** and create a new one. Removing it from history is not enough.
+- Give the service account and the Apple key **only the permissions they need**.
 
-- **Chemins des clés** : `google/index.js` résout `KEY_FILE` depuis `google/`, alors que `google/lib/price.mjs` le résout depuis `config/`. `apple/lib/api.js` lit `PRIVATE_KEY_PATH` depuis le dossier d'où tu lances la commande, alors que `apple/fetch.js` le lit depuis la racine du projet. Avec des chemins absolus, le problème disparaît.
-- **Chemins des fichiers** : `apple/index.js` lit le JSON et le dossier des captures depuis le dossier courant. `google/index.js` les lit depuis `google/`.
-- **Pas de contrôle de longueur côté Apple** dans `update:ios` : un texte trop long est refusé par Apple au moment de l'envoi.
-- **Seules les 20 dernières versions iOS** sont parcourues pour retrouver la version demandée.
-- **Formats de captures Apple** : seuls le 6,5" (iPhone) et le 13" (iPad) sont envoyés.
+## Known limitations
 
-## Structure du projet
+- **Key paths**: `google/index.js` resolves `KEY_FILE` from `google/`, while `google/lib/price.mjs` resolves it from `config/`. `apple/lib/api.js` reads `PRIVATE_KEY_PATH` from the folder you run the command in, while `apple/fetch.js` reads it from the project root. Absolute paths avoid the problem.
+- **File paths**: `apple/index.js` reads the JSON and screenshots folder from the current directory. `google/index.js` reads them from `google/`.
+- **No length check on Apple** in `update:ios`: text that is too long is rejected by Apple at upload time.
+- **Only the 20 most recent iOS versions** are searched when looking up the requested version.
+- **Apple screenshot sizes**: only 6.5" (iPhone) and 13" (iPad) are uploaded.
+
+## Project structure
 
 ```
 .
 ├── apple/
-│   ├── index.js            # envoi textes + captures
-│   ├── fetch.js            # lecture de la fiche en ligne
+│   ├── index.js            # upload text + screenshots
+│   ├── fetch.js            # read the live listing
 │   └── lib/
-│       ├── api.js          # client App Store Connect (JWT)
-│       ├── version.js      # version modifiable
-│       ├── metadata.js     # localisations
-│       ├── screenshots.js  # captures
-│       ├── whatnews.js     # nouveautés seules
+│       ├── api.js          # App Store Connect client (JWT)
+│       ├── version.js      # editable version lookup
+│       ├── metadata.js     # localizations
+│       ├── screenshots.js  # screenshots
+│       ├── whatnews.js     # What's New only
 │       ├── mockups.js
 │       └── price.mjs
 ├── google/
 │   ├── index.js
 │   ├── fetch.js
 │   └── lib/
-│       ├── api.js          # client + gestion des éditions
+│       ├── api.js          # client + edit handling
 │       ├── metadata.js
 │       ├── images.js
 │       ├── mockups.js
 │       └── price.mjs
 ├── config/
-│   └── config.example.js   # à copier en config.js
-├── examples/               # JSON d'exemple
+│   └── config.example.js   # copy to config.js
+├── examples/               # sample JSON files
 └── package.json
 ```
