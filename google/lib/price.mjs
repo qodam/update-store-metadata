@@ -12,6 +12,7 @@ const KEY_FILE = path.resolve(path.dirname(CONFIG), KEY_REL);
 // versions des régions Google Play, de la plus récente à la plus ancienne
 const REGIONS_VERSIONS = ["2026/01", "2025/03", "2022/02"];
 const APPLY = process.argv.includes("--apply");
+const EXPORT = process.argv.includes("--export");
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -24,7 +25,14 @@ const PRODUCT_ID = (await rl.question("ID produit de l'abonnement : ")).trim();
 const BASE_PLAN_ID = (
   await rl.question("ID du forfait de base (base plan) : ")
 ).trim();
-const EXCEL = (await rl.question("Chemin du fichier Excel : "))
+// --export : on écrit les prix actuels dans un Excel ; sinon on lit l'Excel à appliquer
+const EXCEL = (
+  await rl.question(
+    EXPORT
+      ? "Fichier Excel de sortie [prix-google.xlsx] : "
+      : "Chemin du fichier Excel : ",
+  )
+)
   .trim()
   .replace(/^['"]|['"]$/g, "")
   .replace(/\\ /g, " ");
@@ -46,15 +54,18 @@ const toMoney = (currencyCode, value) => {
 };
 const fromMoney = (m) => Number(m.units ?? 0) + (m.nanos ?? 0) / 1e9;
 
-const rows = XLSX.utils
-  .sheet_to_json(XLSX.readFile(EXCEL).Sheets["Prix par pays"])
-  .filter((r) => r.Code && r.Prix);
+const rows = EXPORT
+  ? []
+  : XLSX.utils
+      .sheet_to_json(XLSX.readFile(EXCEL).Sheets["Prix par pays"])
+      .filter((r) => r.Code && r.Prix);
 
-console.log(
-  APPLY
-    ? "\nMODE RÉEL : les prix vont être changés\n"
-    : "\nESSAI À BLANC : rien ne sera changé\n",
-);
+if (!EXPORT)
+  console.log(
+    APPLY
+      ? "\nMODE RÉEL : les prix vont être changés\n"
+      : "\nESSAI À BLANC : rien ne sera changé\n",
+  );
 
 const { data: sub } = await play.monetization.subscriptions.get({
   packageName: PACKAGE,
@@ -65,6 +76,37 @@ if (!plan)
   throw new Error(
     `Forfait de base "${BASE_PLAN_ID}" introuvable dans "${PRODUCT_ID}"`,
   );
+
+// Mode --export : on écrit les prix actuels dans un Excel et on s'arrête
+if (EXPORT) {
+  const out = EXCEL || "prix-google.xlsx";
+  const names = new Intl.DisplayNames(["fr"], { type: "region" });
+  const countryName = (c) => {
+    try {
+      return names.of(c);
+    } catch {
+      return c;
+    }
+  };
+  const data = (plan.regionalConfigs ?? [])
+    .filter((c) => c.price)
+    .sort((a, b) => a.regionCode.localeCompare(b.regionCode))
+    .map((c) => ({
+      Pays: countryName(c.regionCode),
+      Code: c.regionCode,
+      Devise: c.price.currencyCode,
+      Prix: fromMoney(c.price),
+    }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.json_to_sheet(data),
+    "Prix par pays",
+  );
+  XLSX.writeFile(wb, out);
+  console.log(`✅ ${data.length} pays exportés → ${out}`);
+  process.exit(0);
+}
 
 const configs = Object.fromEntries(
   (plan.regionalConfigs ?? []).map((c) => [c.regionCode, c]),

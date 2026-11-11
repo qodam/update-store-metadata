@@ -13,10 +13,18 @@ const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
+const EXPORT = process.argv.includes("--export");
 const SUBSCRIPTION_ID = (
   await rl.question("Apple ID de l'abonnement : ")
 ).trim();
-const EXCEL = (await rl.question("Chemin du fichier Excel : "))
+// --export : on écrit les prix actuels dans un Excel ; sinon on lit l'Excel à appliquer
+const EXCEL = (
+  await rl.question(
+    EXPORT
+      ? "Fichier Excel de sortie [prix-apple.xlsx] : "
+      : "Chemin du fichier Excel : ",
+  )
+)
   .trim()
   .replace(/^['"]|['"]$/g, "") // enlève les guillemets
   .replace(/\\ /g, " "); // glisser-déposer sur Mac : "\ " → espace
@@ -74,28 +82,70 @@ async function pricePoints(territory) {
   return out;
 }
 
-// Prix actuel de chaque pays
+// Prix de chaque pays : prix actif aujourd'hui + prochain prix programmé
 async function currentPrices() {
+  const today = new Date().toISOString().slice(0, 10);
   const map = {};
   let next = `/v1/subscriptions/${SUBSCRIPTION_ID}/prices?include=territory,subscriptionPricePoint&limit=200`;
   while (next) {
     const page = await api(next);
+    const inc = page.included ?? [];
     const points = Object.fromEntries(
-      (page.included ?? [])
+      inc
         .filter((i) => i.type === "subscriptionPricePoints")
         .map((i) => [i.id, parseFloat(i.attributes.customerPrice)]),
     );
+    const currencies = Object.fromEntries(
+      inc
+        .filter((i) => i.type === "territories")
+        .map((i) => [i.id, i.attributes?.currency]),
+    );
     for (const p of page.data) {
       const terr = p.relationships.territory.data.id;
-      const pp = p.relationships.subscriptionPricePoint.data.id;
-      // le prix le plus récent l'emporte
-      const start = p.attributes.startDate ?? "0000";
-      if (!map[terr] || start >= map[terr].start)
-        map[terr] = { price: points[pp], start };
+      const price = points[p.relationships.subscriptionPricePoint.data.id];
+      const start = p.attributes.startDate ?? "0000-00-00";
+      const e = (map[terr] ??= {});
+      e.currency ??= currencies[terr];
+      if (p.attributes.preserved) continue; // prix conservé pour les anciens abonnés
+      if (start <= today) {
+        // le prix actif le plus récent l'emporte
+        if (e.start === undefined || start >= e.start) {
+          e.price = price;
+          e.start = start;
+        }
+      } else if (!e.futureStart || start < e.futureStart) {
+        e.future = price;
+        e.futureStart = start;
+      }
     }
     next = page.links?.next ?? null;
   }
   return map;
+}
+
+// Mode --export : on écrit les prix actuels dans un Excel et on s'arrête
+if (EXPORT) {
+  const out = EXCEL || "prix-apple.xlsx";
+  const all = await currentPrices();
+  const data = Object.entries(all)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([code, e]) => ({
+      Pays: code,
+      Code: code,
+      Devise: e.currency ?? "",
+      Prix: e.price ?? "",
+      "Prix programmé": e.future ?? "",
+      "Date prix programmé": e.futureStart ?? "",
+    }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.json_to_sheet(data),
+    "Prix par pays",
+  );
+  XLSX.writeFile(wb, out);
+  console.log(`✅ ${data.length} pays exportés → ${out}`);
+  process.exit(0);
 }
 
 const rows = XLSX.utils
